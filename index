@@ -1,0 +1,177 @@
+"""Maak een interactief HTML-overzicht van de leden van De 15de."""
+
+from datetime import date
+from html import escape
+from pathlib import Path
+from string import Template
+
+
+# Voeg nieuwe leden hier toe. Gebruik JJJJ-MM-DD voor de datum.
+LEDEN = [
+    ("Javier", "2012-11-15"),
+    ("Eugene", "2012-11-15"),
+    ("Vincent", "2012-11-15"),
+    ("Khalid", "2013-07-15"),
+    ("Ruud", "2015-05-03"),
+    ("Sander", "2015-08-11"),
+    ("Marc", "2017-11-02"),
+    ("Sennen", "2022-12-15"),
+    ("Jef", "2024-12-15"),
+    ("Ron", "2026-05-15"),
+]
+
+MAANDEN = (
+    "januari", "februari", "maart", "april", "mei", "juni",
+    "juli", "augustus", "september", "oktober", "november", "december",
+)
+
+PAGINA = Template(r'''
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>De 15de | Ledenoverzicht</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --background: #171019;
+      --foreground: #fff4eb;
+      --border: #503648;
+      --muted: #382332;
+      --viz-series-1: #eea781;
+      font-family: system-ui, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--background); color: var(--foreground); }
+    main { max-width: 800px; margin: 40px auto; padding: 0 20px 24px; }
+    .intro h2 { font: 500 clamp(2.2rem, 7vw, 3.6rem)/1.1 Georgia, serif; }
+    .viz-badge { display: grid; place-items: center; flex: 0 0 55px; height: 55px;
+      border-radius: 50%; background: var(--viz-series-1); color: #29131c; font: 1.6rem Georgia, serif; }
+    .text-muted { color: #cfb7c6; }
+    .text-small { font-size: .875rem; }
+    .text-end { text-align: right; }
+    .tabular-nums { font-variant-numeric: tabular-nums; }
+    .btn { padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px;
+      background: var(--muted); color: var(--foreground); font: inherit; cursor: pointer; }
+    .btn[aria-pressed="true"] { background: var(--viz-series-1); color: #29131c; border-color: transparent; }
+    .table { border-collapse: collapse; text-align: left; font-variant-numeric: tabular-nums; }
+    .table th, .table td { border-bottom: 1px solid var(--border); padding: 10px 5px; }
+    .table time { white-space: nowrap; }
+    .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden;
+      clip-path: inset(50%); white-space: nowrap; }
+    @media (max-width: 430px) {
+      main { margin-top: 20px; padding-inline: 12px; }
+      .table { font-size: .875rem; }
+    }
+  </style>
+</head>
+<body>
+<main>
+<div id="de-vijftiende" lang="nl">
+  <style>
+    #de-vijftiende .intro { display:flex; align-items:center; gap:14px; padding-block:10px 17px; border-bottom:1px solid var(--border); }
+    #de-vijftiende .intro h2, #de-vijftiende .intro p { margin:0; }
+    #de-vijftiende .flag { display:inline-block; width:24px; height:auto; vertical-align:middle; margin-inline-start:6px; border-radius:2px; }
+    #de-vijftiende .tools { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; margin:18px 0 10px; }
+    #de-vijftiende .tools h3 { margin:0; }
+    #de-vijftiende .units { display:flex; gap:4px; }
+    #de-vijftiende table { width:100%; }
+    #de-vijftiende th:first-child { width:17%; }
+    #de-vijftiende th:nth-child(2) { width:26%; }
+    #de-vijftiende .measure { display:grid; grid-template-columns:minmax(12px,1fr) minmax(4ch, auto); gap:8px; align-items:center; }
+    #de-vijftiende .track { height:12px; background:var(--muted); border-radius:2px; }
+    #de-vijftiende .fill { height:100%; background:var(--viz-series-1); border-radius:2px; width:var(--length); transition:width .24s ease; }
+    #de-vijftiende .number { text-align:right; min-width:5.5ch; }
+    #de-vijftiende .foot { margin:10px 0 0; }
+    @media (prefers-reduced-motion:reduce) { #de-vijftiende .fill { transition:none; } }
+  </style>
+  <header class="intro">
+    <span class="viz-badge" aria-hidden="true">15</span>
+    <div>
+      <h2>De 15de
+        <svg class="flag" viewBox="0 0 5 3" role="img" aria-label="Schotse vlag">
+          <rect width="5" height="3" fill="#0065bd"/>
+          <path d="M0 0L5 3M0 3L5 0" stroke="#fff" stroke-width=".5"/>
+        </svg>
+      </h2>
+      <p class="text-muted">Elke maand samen aan tafel</p>
+    </div>
+  </header>
+  <section aria-labelledby="vijftiende-heading">
+    <div class="tools">
+      <h3 id="vijftiende-heading">Hoe lang zijn we al lid?</h3>
+      <div class="units" role="group" aria-label="Eenheid voor lidmaatschapsduur">
+        <button type="button" class="btn" data-unit="Dagen" aria-pressed="true">Dagen</button>
+        <button type="button" class="btn" data-unit="Maanden" aria-pressed="false">Maanden</button>
+        <button type="button" class="btn" data-unit="Jaren" aria-pressed="false">Jaren</button>
+      </div>
+    </div>
+    <table class="table table-sm">
+      <caption class="sr-only">Leden op volgorde van toetreding met een horizontaal staafdiagram van hun lidmaatschapsduur.</caption>
+      <thead><tr><th scope="col">Lid</th><th scope="col">Lid sinds</th><th scope="col" class="text-end" data-column>Dagen</th></tr></thead>
+      <tbody>
+$rows
+      </tbody>
+    </table>
+    <p class="foot text-small text-muted" aria-live="polite">Peildatum $reference_date<span data-rounding></span></p>
+  </section>
+  <script>
+    (() => {
+      const root = document.getElementById('de-vijftiende');
+      const buttons = [...root.querySelectorAll('button[data-unit]')];
+      const rows = [...root.querySelectorAll('tbody tr')];
+      const maximum = Math.max(1, ...rows.map(row => Number(row.dataset.days)));
+      const whole = new Intl.NumberFormat('nl-NL', {maximumFractionDigits:0});
+      const decimal = new Intl.NumberFormat('nl-NL', {minimumFractionDigits:1, maximumFractionDigits:1});
+      const factors = {Dagen:1, Maanden:365.2425 / 12, Jaren:365.2425};
+      const values = rows.map(row => {
+        const cell = row.cells[2];
+        const days = Number(row.dataset.days);
+        cell.innerHTML = '<div class="measure"><div class="track" aria-hidden="true"><div class="fill"></div></div><span class="number tabular-nums"></span></div>';
+        cell.querySelector('.fill').style.setProperty('--length', (100 * days / maximum) + '%');
+        return {days, label:cell.querySelector('.number')};
+      });
+      function show(unit) {
+        const isDays = unit === 'Dagen';
+        root.querySelector('[data-column]').textContent = unit;
+        root.querySelector('[data-rounding]').textContent = isDays ? '' : ' · ' + unit + ' bij benadering';
+        buttons.forEach(button => button.setAttribute('aria-pressed', String(button.dataset.unit === unit)));
+        values.forEach(({days, label}) => {
+          label.textContent = (unit === 'Jaren' ? decimal : whole).format(days / factors[unit]);
+        });
+      }
+      buttons.forEach(button => button.addEventListener('click', () => show(button.dataset.unit)));
+      show('Dagen');
+    })();
+  </script>
+</div>
+</main>
+</body>
+</html>
+''')
+
+
+def maak_html(peildatum: date) -> str:
+    """Bereken de duur en bouw de HTML voor de opgegeven peildatum."""
+    leden = sorted(LEDEN, key=lambda lid: lid[1])
+    rijen = []
+    for naam, datum in leden:
+        lid_sinds = date.fromisoformat(datum)
+        if lid_sinds > peildatum:
+            continue
+        dagen = (peildatum - lid_sinds).days
+        dagen_tekst = f"{dagen:,}".replace(",", ".")
+        rijen.append(
+            f'<tr data-days="{dagen}"><th scope="row">{escape(naam)}</th>'
+            f'<td><time datetime="{datum}">{lid_sinds:%d-%m-%Y}</time></td>'
+            f'<td class="text-end">{dagen_tekst}</td></tr>'
+        )
+    datumtekst = f"{peildatum.day} {MAANDEN[peildatum.month - 1]} {peildatum.year}"
+    return PAGINA.substitute(rows="\n".join(rijen), reference_date=datumtekst)
+
+
+if __name__ == "__main__":
+    uitvoer = Path(__file__).resolve().with_suffix(".html")
+    uitvoer.write_text(maak_html(date.today()), encoding="utf-8")
+    print(f"HTML gemaakt: {uitvoer}")
