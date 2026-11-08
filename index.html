@@ -1,30 +1,4 @@
 
-from datetime import date
-from html import escape
-from pathlib import Path
-from string import Template
-
-
-# Voeg nieuwe leden hier toe. Gebruik JJJJ-MM-DD voor de datum.
-LEDEN = [
-    ("Javier", "2012-11-15"),
-    ("Eugene", "2012-11-15"),
-    ("Vincent", "2012-11-15"),
-    ("Khalid", "2013-07-15"),
-    ("Ruud", "2015-05-03"),
-    ("Sander", "2015-08-11"),
-    ("Marc", "2017-11-02"),
-    ("Sennen", "2022-12-15"),
-    ("Jef", "2024-12-15"),
-    ("Ron", "2026-05-15"),
-]
-
-MAANDEN = (
-    "januari", "februari", "maart", "april", "mei", "juni",
-    "juli", "augustus", "september", "oktober", "november", "december",
-)
-
-PAGINA = Template(r'''
 <!doctype html>
 <html lang="nl">
 <head>
@@ -110,10 +84,19 @@ PAGINA = Template(r'''
       <caption class="sr-only">Leden op volgorde van toetreding met een horizontaal staafdiagram van hun lidmaatschapsduur.</caption>
       <thead><tr><th scope="col">Lid</th><th scope="col">Lid sinds</th><th scope="col" class="text-end" data-column>Dagen</th></tr></thead>
       <tbody>
-$rows
+<tr data-days="5106"><th scope="row">Javier</th><td><time datetime="2012-11-15">15-11-2012</time></td><td class="text-end">5.106</td></tr>
+<tr data-days="5106"><th scope="row">Eugene</th><td><time datetime="2012-11-15">15-11-2012</time></td><td class="text-end">5.106</td></tr>
+<tr data-days="5106"><th scope="row">Vincent</th><td><time datetime="2012-11-15">15-11-2012</time></td><td class="text-end">5.106</td></tr>
+<tr data-days="4864"><th scope="row">Khalid</th><td><time datetime="2013-07-15">15-07-2013</time></td><td class="text-end">4.864</td></tr>
+<tr data-days="4207"><th scope="row">Ruud</th><td><time datetime="2015-05-03">03-05-2015</time></td><td class="text-end">4.207</td></tr>
+<tr data-days="4107"><th scope="row">Sander</th><td><time datetime="2015-08-11">11-08-2015</time></td><td class="text-end">4.107</td></tr>
+<tr data-days="3293"><th scope="row">Marc</th><td><time datetime="2017-11-02">02-11-2017</time></td><td class="text-end">3.293</td></tr>
+<tr data-days="1424"><th scope="row">Sennen</th><td><time datetime="2022-12-15">15-12-2022</time></td><td class="text-end">1.424</td></tr>
+<tr data-days="693"><th scope="row">Jef</th><td><time datetime="2024-12-15">15-12-2024</time></td><td class="text-end">693</td></tr>
+<tr data-days="177"><th scope="row">Ron</th><td><time datetime="2026-05-15">15-05-2026</time></td><td class="text-end">177</td></tr>
       </tbody>
     </table>
-    <p class="foot text-small text-muted" aria-live="polite">Peildatum $reference_date<span data-rounding></span></p>
+    <p class="foot text-small text-muted" aria-live="polite">Peildatum 8 november 2026<span data-rounding></span></p>
   </section>
   <script>
     (() => {
@@ -148,29 +131,3 @@ $rows
 </main>
 </body>
 </html>
-''')
-
-
-def maak_html(peildatum: date) -> str:
-    """Bereken de duur en bouw de HTML voor de opgegeven peildatum."""
-    leden = sorted(LEDEN, key=lambda lid: lid[1])
-    rijen = []
-    for naam, datum in leden:
-        lid_sinds = date.fromisoformat(datum)
-        if lid_sinds > peildatum:
-            continue
-        dagen = (peildatum - lid_sinds).days
-        dagen_tekst = f"{dagen:,}".replace(",", ".")
-        rijen.append(
-            f'<tr data-days="{dagen}"><th scope="row">{escape(naam)}</th>'
-            f'<td><time datetime="{datum}">{lid_sinds:%d-%m-%Y}</time></td>'
-            f'<td class="text-end">{dagen_tekst}</td></tr>'
-        )
-    datumtekst = f"{peildatum.day} {MAANDEN[peildatum.month - 1]} {peildatum.year}"
-    return PAGINA.substitute(rows="\n".join(rijen), reference_date=datumtekst)
-
-
-if __name__ == "__main__":
-    uitvoer = Path(__file__).resolve().with_suffix(".html")
-    uitvoer.write_text(maak_html(date.today()), encoding="utf-8")
-    print(f"HTML gemaakt: {uitvoer}")
